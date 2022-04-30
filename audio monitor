@@ -1,0 +1,153 @@
+#NoEnv 
+SendMode Input 
+SetWorkingDir %A_ScriptDir%
+#SingleInstance, Force
+#Include, VA.ahk
+deadair = 0
+air = 1
+dair = 0
+miclock = 0
+halt = 0
+
+
+
+cc= audio
+Gui, %CC%:+AlwaysOnTop -MinimizeBox
+Gui, %CC%:Add, Text, w450  vCookies, CX %CXValue% MIC %MICValue%
+Gui, %CC%:Show, w450 h50
+
+
+
+MicName := VA_GetDeviceName(Device)
+CXMeterObj := VA_GetAudioMeter("playback")
+MICMeterObj := VA_GetAudioMeter("capture")
+
+
+SetTimer, Listener, 100
+Listener:
+if halt = 0
+{
+reset += 1
+
+if reset = 20
+{
+cxlock = 0
+}
+if reset = 40
+{
+reset = 0
+override = 0
+cxlock = 0
+}
+
+VA_IAudioMeterInformation_GetPeakValue(CXMeterObj, CXValue)
+
+
+VA_IAudioMeterInformation_GetPeakValue(MICMeterObj, MICValue) 
+GuiControl,audio: , Cookies,% "CX: " CXValue "    MIC: " MICValue "    Dead Air: " deadair "    Override: " override "    dead%: " dead "%"
+if (MICValue > 0.007) OR (CXValue > 0.05)
+{
+Gui, audio:Color, green
+air += 1
+}
+else
+{
+Gui, audio:Color, red
+
+deadair += 1
+if deadair > 80
+dair +=1
+air += 1
+
+}
+
+if (MICValue > 0.007) AND (CXValue > 0.05)
+{
+Gui, audio:Color, Black
+
+}
+
+if (CXValue = 0.000000)
+{
+lock = 1
+air = 1
+dair = 0
+deadair = 0
+}
+
+if (MICValue > 0.007)
+override += 1
+
+
+dead := Round((dair/air)*100)
+
+if deadair > 280
+{
+deadair = 80
+msgbox,,,TALK!!!,5
+}
+
+
+if (CXValue > 0.05)
+{
+override += 1
+cxlock += 1
+lock = 0
+}
+
+if cxlock = 5
+{
+if VA_GetMute(,"capture") = 1 ; stop unmute process from unmuting accidentaly
+{
+miclock = 1
+}
+else
+{
+miclock = 0
+cxlock = 0
+}
+}
+
+
+if override = 10
+{
+override = 0
+deadair = 0
+}
+
+
+;mic 0.007
+;cx 0.05
+; talk = 5(half a second)  = mute
+; silence = 20(2 seconds)  = unmute
+
+
+if (PeakValue > 0.15)
+
+if miclock = 1
+VA_SetVolume(0,,"capture")
+
+if miclock = 2
+{
+miclock = 0
+VA_SetVolume(100,,"capture")
+}
+}
+return
+
+
+
+!numpad6::
+
+msgbox, % VA_GetMute(,"capture")
+
+;VA_SetMute(!VA_GetMute(,"capture"),,"capture")
+return
+
+!numpad4:: ; Kill Switch
+VA_SetVolume(100,,"capture")
+halt := !halt
+return
+
+
+
